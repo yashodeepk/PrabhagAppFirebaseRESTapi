@@ -95,52 +95,27 @@ app.get('/api/readalldata', (req, res) => {
 	})();
 });
 
-app.get('/api/readbyname/:pageNo&:limit', (req, res) => {
-	( async() => {
-		try
-		{
-			let query = db.collection('users');
-			let response = [];
-
-			await query.get().then( querysnapshot =>{
-				let docs = querysnapshot.docs;
-				for(let doc of docs)
-				{
-					const selectedItem = {
-						id: doc.id,
-						name: doc.data().name,
-						bloodgroup: doc.data().bloodgroup,
-						occupation: doc.data().occupation,
-						mobileno: doc.data().mobileno
-					};
-					response.push(selectedItem);	
-				}
-				return response;
-			})
-			return res.status(200).send(response);
-		}
-		catch(error)
-		{
-			console.log(error);
-			return res.status(500).send(error);
-		}
-	})();
-});
-
 
 app.get('/api/readbyname/:searchtext&:pageNo&:limit', (req, res) => {
 	( async() => {
 		try
 		{
+			let returnvar;
 			let query = db.collection('users');
+			let pageNo = req.params.pageNo;
+			let limit = req.params.limit;
+			var searchtext = req.params.searchtext;
+			console.log(searchtext);
 			let response = [];
-
+			let response2 = [];
+			let pagedata;
 			await query.get().then( querysnapshot =>{
 				let docs = querysnapshot.docs;
-				console.log(req.params.searchtext);
 				for(let doc of docs)
 				{
-					if(req.params.searchtext === null || req.params.searchtext === '')
+				  if(searchtext)
+				  {
+					if(searchtext === "null")  //Changed here 6/5/2020 8:21AM
 					{
 						console.log("in empty condition");
 						const selectedItem = {
@@ -148,7 +123,8 @@ app.get('/api/readbyname/:searchtext&:pageNo&:limit', (req, res) => {
 							name: doc.data().name,
 							bloodgroup: doc.data().bloodgroup,
 							occupation: doc.data().occupation,
-							mobileno: doc.data().mobileno
+							mobileno: doc.data().mobileno,
+							Gender: doc.data().Gender
 						};
 						response.push(selectedItem);	
 					}
@@ -160,7 +136,8 @@ app.get('/api/readbyname/:searchtext&:pageNo&:limit', (req, res) => {
 							name: doc.data().name,
 							bloodgroup: doc.data().bloodgroup,
 							occupation: doc.data().occupation,
-							mobileno: doc.data().mobileno
+							mobileno: doc.data().mobileno,
+							Gender: doc.data().Gender
 						};
 						response.push(selectedItem);
 					}
@@ -168,10 +145,59 @@ app.get('/api/readbyname/:searchtext&:pageNo&:limit', (req, res) => {
 					{
 						console.log("In Else");
 					}
+				  }
+				  else
+				  {
+					  const selectedItem = {
+							id: doc.id,
+							name: doc.data().name,
+							bloodgroup: doc.data().bloodgroup,
+							occupation: doc.data().occupation,
+							mobileno: doc.data().mobileno,
+							Gender: doc.data().Gender
+						};
+						response.push(selectedItem);
+				  }
 				}
-				return response;
+				
+				if(limit > response.length )
+				{
+					limit = response.length;
+				}
+				let totalpages = Math.ceil(response.length/limit);
+				let startIndex = (pageNo-1)*limit;
+				let endIndex = pageNo*limit;
+				if(endIndex > totalpages*limit)
+				{
+					endIndex = totalpages*limit;
+				}
+				
+				for(let index = startIndex; index < endIndex; index++)
+				{
+					//console.log(response[1].data());
+					//console.log(response.length);
+					const selectedItem = {
+							id: response[index].id,
+							name: response[index].name,
+							bloodgroup: response[index].bloodgroup,
+							occupation: response[index].occupation,
+							mobileno: response[index].mobileno,
+							Gender: response[index].Gender
+						};
+						console.log(selectedItem);
+						response2.push(selectedItem);
+				}
+				
+				pagedata = {totalpages:totalpages,
+								currentpage:pageNo};
+
+								
+				returnvar = {response:response2,
+							 pagedata:pagedata};
+							 
+				return returnvar;
 			})
-			return res.status(200).send(response);
+			return res.status(200).send(returnvar);
 		}
 		catch(error)
 		{
@@ -202,7 +228,8 @@ app.get('/api/authphone/:phoneno', (req, res) => {
 							name: doc.data().name,
 							bloodgroup: doc.data().bloodgroup,
 							occupation: doc.data().occupation,
-							mobileno: doc.data().mobileno
+							mobileno: doc.data().mobileno,
+							Gender: doc.data().Gender
 						};
 						response = selectedItem;
 						break;
