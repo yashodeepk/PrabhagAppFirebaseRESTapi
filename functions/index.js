@@ -3,53 +3,31 @@ const admin = require('firebase-admin');
 const express = require('express');
 const cors = require('cors');
 const app = express();
-var busboy = require('connect-busboy');
 app.use(cors({origin:true}));
-app.use(busboy());
+
 var serviceAccount = require("./performance.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://todo-bca74.firebaseio.com"
+  databaseURL: "https://todo-bca74.firebaseio.com",
 });
 
 const db = admin.firestore();
 
+//TEST API
 app.get('/hello-world', (req, res) => {
-	return res.status(200).send('Hello! from Yashodeeps Firebase Server');
+	return res.status(200).send("Yashodeep's firebase database!");
 });
 
-
-app.post('/api/create', (req, res) => {
-	( async() => {
-		try
-		{
-			await db.collection('users').doc('/' + req.body.id + '/')
-			.create({
-				name : req.body.name,
-				bloodgroup: req.body.bloodgroup,
-				occupation: req.body.occupation,
-				mobileno: req.body.mobileno
-			})
-				return res.status(200).send('Data Added');
-		}
-		catch(error)
-		{
-			console.log(error);
-			return res.status(500).send(error);
-		}
-	})();
-});
-
-
+//Reads by ID
 app.get('/api/read/:id', (req, res) => {
 	( async() => {
 		try
 		{
-			let query = db.collection('users').doc(req.params.id);
+			let query = db.collection('entities').doc(req.params.id);
 			let person = await query.get();
 			let response = person.data();
-
+			
 			return res.status(200).send(response);
 		}
 		catch(error)
@@ -60,178 +38,26 @@ app.get('/api/read/:id', (req, res) => {
 	})();
 });
 
-
-app.get('/api/readalldata', (req, res) => {
+//for login
+app.get('/api/authphone/:mobileno', (req, res) => {
 	( async() => {
 		try
 		{
-			let query = db.collection('users');
-			let response = [];
-
-			await query.get().then( querysnapshot =>{
-				let docs = querysnapshot.docs;
-
-				for(let doc of docs)
-				{
-					const selectedItem = {
-						id: doc.id,
-						name: doc.data().name
-					};
-					response.push(selectedItem);
-				}
-
-				return response;
-
-			})
-			return res.status(200).send(response);
-
-
-		}
-		catch(error)
-		{
-			console.log(error);
-			return res.status(500).send(error);
-		}
-	})();
-});
-
-
-app.get('/api/readbyname/:searchtext&:pageNo&:limit', (req, res) => {
-	( async() => {
-		try
-		{
-			let returnvar;
-			let query = db.collection('users');
-			let pageNo = req.params.pageNo;
-			let limit = req.params.limit;
-			var searchtext = req.params.searchtext;
-			console.log(searchtext);
-			let response = [];
-			let response2 = [];
-			let pagedata;
-			await query.get().then( querysnapshot =>{
-				let docs = querysnapshot.docs;
-				for(let doc of docs)
-				{
-				  if(searchtext)
-				  {
-					if(searchtext === "null")  //Changed here 6/5/2020 8:21AM
-					{
-						console.log("in empty condition");
-						const selectedItem = {
-							id: doc.id,
-							name: doc.data().name,
-							bloodgroup: doc.data().bloodgroup,
-							occupation: doc.data().occupation,
-							mobileno: doc.data().mobileno,
-							Gender: doc.data().Gender
-						};
-						response.push(selectedItem);	
-					}
-					else if((doc.data().name.toLowerCase().indexOf(req.params.searchtext.toLowerCase()) >= 0) || (doc.data().occupation.toLowerCase().indexOf(req.params.searchtext.toLowerCase()) >= 0) || (doc.data().bloodgroup.indexOf(req.params.searchtext.toUpperCase()) >= 0) )
-					{
-						console.log("comparing condition");
-						const selectedItem = {
-							id: doc.id,
-							name: doc.data().name,
-							bloodgroup: doc.data().bloodgroup,
-							occupation: doc.data().occupation,
-							mobileno: doc.data().mobileno,
-							Gender: doc.data().Gender
-						};
-						response.push(selectedItem);
-					}
-					else
-					{
-						console.log("In Else");
-					}
-				  }
-				  else
-				  {
-					  const selectedItem = {
-							id: doc.id,
-							name: doc.data().name,
-							bloodgroup: doc.data().bloodgroup,
-							occupation: doc.data().occupation,
-							mobileno: doc.data().mobileno,
-							Gender: doc.data().Gender
-						};
-						response.push(selectedItem);
-				  }
-				}
-				
-				if(limit > response.length )
-				{
-					limit = response.length;
-				}
-				let totalpages = Math.ceil(response.length/limit);
-				let startIndex = (pageNo-1)*limit;
-				let endIndex = pageNo*limit;
-				if(endIndex > totalpages*limit)
-				{
-					endIndex = totalpages*limit;
-				}
-				
-				for(let index = startIndex; index < endIndex; index++)
-				{
-					//console.log(response[1].data());
-					//console.log(response.length);
-					const selectedItem = {
-							id: response[index].id,
-							name: response[index].name,
-							bloodgroup: response[index].bloodgroup,
-							occupation: response[index].occupation,
-							mobileno: response[index].mobileno,
-							Gender: response[index].Gender
-						};
-						console.log(selectedItem);
-						response2.push(selectedItem);
-				}
-				
-				pagedata = {totalpages:totalpages,
-								currentpage:pageNo};
-
-								
-				returnvar = {response:response2,
-							 pagedata:pagedata};
-							 
-				return returnvar;
-			})
-			return res.status(200).send(returnvar);
-		}
-		catch(error)
-		{
-			console.log(error);
-			return res.status(500).send(error);
-		}
-	})();
-});
-
-
-
-
-app.get('/api/authphone/:phoneno', (req, res) => {
-	( async() => {
-		try
-		{
-			let query = db.collection('users');
+			let query = db.collection('entities');
 			let response = null;
 			await query.get().then( querysnapshot =>{
 				let docs = querysnapshot.docs;
 
 				for(let doc of docs)
 				{
-					if(doc.data().mobileno.toString() === req.params.phoneno.toString()) 
+					if(doc.data().mobileno.toString() === req.params.mobileno.toString()) 
 					{
-						const selectedItem = {
+						response = {
 							id: doc.id,
-							name: doc.data().name,
-							bloodgroup: doc.data().bloodgroup,
-							occupation: doc.data().occupation,
 							mobileno: doc.data().mobileno,
-							Gender: doc.data().Gender
+							name: doc.data().name,
+							usertype: doc.data().usertype,
 						};
-						response = selectedItem;
 						break;
 					}
 				}
@@ -254,49 +80,50 @@ app.get('/api/authphone/:phoneno', (req, res) => {
 	})();
 });
 
-app.get('/api/paginationlist/:pageNo&:limit', (req, res) => {
+//Get family member data
+app.get('/api/familymember/:familycode', (req, res) => {
 	( async() => {
 		try
 		{
-			let query = db.collection('users');
-			let pageNo = req.params.pageNo;
-			let limit = req.params.limit;
+			let query = db.collection('entities');
 			let response = [];
 			await query.get().then( querysnapshot =>{
 				let docs = querysnapshot.docs;
-				if(limit > docs.length )
+
+				for(let doc of docs)
 				{
-					limit = docs.length;
-				}
-				let totalpages = (docs.length/limit);
-				let startIndex = (pageNo-1)*limit;
-				let endIndex = pageNo*limit;
-				if(endIndex > totalpages*limit)
-				{
-					endIndex = totalpages*limit;
-				}
-				console.log(startIndex);
-				console.log(endIndex);
-				console.log(totalpages);
-				for(let index = startIndex; index < endIndex; index++)
-				{
-					//console.log(docs[1].data());
-					//console.log(docs.length);
-					const selectedItem = {
-							id: docs[index].id,
-							name: docs[index].data().name,
-							bloodgroup: docs[index].data().bloodgroup,
-							occupation: docs[index].data().occupation,
-							mobileno: docs[index].data().mobileno
+					if(doc.data().familycode.toString() === req.params.familycode.toString()) 
+					{
+						let selectedItem = {
+							id                  : doc.id,
+							familycode			: doc.data().familycode		,
+							name				: doc.data().name			,
+							mobileno			: doc.data().mobileno		,
+							address				: doc.data().address		,	
+							relation			: doc.data().relation		,
+							dob			        : doc.data().dob			,    
+							dom			        : doc.data().dom			,    
+							education		    : doc.data().education		,
+							bloodgroup          : doc.data().bloodgroup     , 
+							businessjob	        : doc.data().businessjob	,    
+							email		        : doc.data().email		    ,
+							typeofbusiness      : doc.data().typeofbusiness , 
+							businessbrief       : doc.data().businessbrief  , 
+							businessaddress     : doc.data().businessaddress 
 						};
-						console.log(selectedItem);
 						response.push(selectedItem);
+					}
 				}
-				response.push("totalpages: " + totalpages);
-				response.push("currentpage: " + pageNo);
 				return response;
 			})
-			return res.status(200).send(response);
+			if(response !== null)
+			{
+				return res.status(200).send(response);
+			}
+			else
+			{
+				return res.status(404).send('User not found');
+			}
 		}
 		catch(error)
 		{
@@ -305,5 +132,124 @@ app.get('/api/paginationlist/:pageNo&:limit', (req, res) => {
 		}
 	})();
 });
+
+app.post('/api/readbyname', (req, res) => {
+	( async() => {
+		try
+		{
+			let returnvar;
+			let query = db.collection('entities');
+			let pageNo = req.body.pageNo;
+			let limit = req.body.limit;
+			let searchtext = req.body.searchtext;
+			console.log(searchtext);
+			let response = [];
+			let response2 = [];
+			let pagedata;
+			await query.get().then( querysnapshot =>{
+				let docs = querysnapshot.docs;
+				if(searchtext)
+				{
+					for(let doc of docs)
+					{
+						if((doc.data().name.toString().toLowerCase().indexOf(req.body.searchtext.toString().toLowerCase()) >= 0) || (doc.data().education.toString().toLowerCase().indexOf(req.body.searchtext.toString().toLowerCase()) >= 0) || (doc.data().bloodgroup.toString().indexOf(req.body.searchtext.toString().toLowerCase()) >= 0) )
+						{
+							console.log("comparing condition");
+							const selectedItem = {
+								id			: doc.id,
+								name		: doc.data().name,
+								familycode	: doc.data().familycode,
+								education	: doc.data().education
+							};
+							response.push(selectedItem);
+						}
+					}
+					if(limit > response.length )
+					{
+						limit = response.length;
+					}
+					let totalpages = Math.ceil(response.length/limit);
+					let startIndex = (pageNo-1)*limit;
+					let endIndex = pageNo*limit;
+					if(endIndex > response.length)
+					{
+						endIndex = response.length;
+					}
+					
+					for(let index = startIndex; index < endIndex; index++)
+					{
+						//console.log(response[1].data());
+						//console.log(response.length);
+						const selectedItem = {
+								id			: response[index].id	,		
+								name		: response[index].name	,	
+								familycode	: response[index].familycode,		
+								education	: response[index].education	
+							};
+							console.log(selectedItem);
+							response2.push(selectedItem);
+					}
+					
+					pagedata = {totalpages:totalpages,
+									currentpage:pageNo};
+	
+									
+					returnvar = {response:response2,
+								pagedata:pagedata};
+								
+					return returnvar;
+				}
+				else
+				{
+					if(limit > docs.length )
+					{
+						limit = docs.length;
+					}
+					let totalpages = Math.ceil(docs.length/limit);
+					let startIndex = (pageNo-1)*limit;
+					let endIndex = pageNo*limit;
+					if(endIndex > docs.length)
+					{
+						endIndex = docs.length;
+					}
+					
+					for(let index = startIndex; index < endIndex; index++)
+					{
+						//console.log(docs[1].data());
+						//console.log(docs.length);
+						const selectedItem = {
+								id			: docs[index].id	,		
+								name		: docs[index].data().name	,	
+								familycode	: docs[index].data().familycode,		
+								education	: docs[index].data().education	
+							};
+							console.log(selectedItem);
+							response2.push(selectedItem);
+					}
+					
+					pagedata = {totalpages:totalpages,
+									currentpage:pageNo};
+	
+									
+					returnvar = {response:response2,
+								pagedata:pagedata};
+								
+					return returnvar;
+				}
+			})
+			return res.status(200).send(returnvar);
+		}
+		catch(error)
+		{
+			console.log(error);
+			return res.status(500).send(error);
+		}
+	})();
+});
+
+//Profile
+
+
+
 //Export the api to firebase cloud functions
 exports.app = functions.https.onRequest(app);
