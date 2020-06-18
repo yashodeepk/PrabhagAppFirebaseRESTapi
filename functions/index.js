@@ -247,9 +247,40 @@ app.post('/api/readbyname', (req, res) => {
 	})();
 });
 
-//Profile
-
-
+//Profile update
+app.post('/api/update', (req, res) => {
+	( async() => {
+		try
+		{
+			for(let index = 0; index< req.body.person.length; index++)
+			{
+				db.collection('entities').doc('/' + req.body.person[index].id + '/')
+				.update({
+							familycode			: req.body.person[index].familycode		,
+							name				: req.body.person[index].name			,
+							mobileno			: req.body.person[index].mobileno		,
+							address				: req.body.person[index].address		,	
+							relation			: req.body.person[index].relation		,
+							dob			        : req.body.person[index].dob			,    
+							dom			        : req.body.person[index].dom			,    
+							education		    : req.body.person[index].education		,
+							bloodgroup          : req.body.person[index].bloodgroup     , 
+							businessjob	        : req.body.person[index].businessjob	,    
+							email		        : req.body.person[index].email		    ,
+							typeofbusiness      : req.body.person[index].typeofbusiness , 
+							businessbrief       : req.body.person[index].businessbrief  , 
+							businessaddress     : req.body.person[index].businessaddress 
+				})
+			}
+				return res.status(200).send('Data Added');
+		}
+		catch(error)
+		{
+			console.log(error);
+			return res.status(500).send(error);
+		}
+	})();
+});
 
 //Export the api to firebase cloud functions
 exports.app = functions.https.onRequest(app);
