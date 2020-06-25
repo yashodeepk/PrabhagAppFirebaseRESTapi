@@ -54,6 +54,7 @@ app.get('/api/authphone/:mobileno', (req, res) => {
 					{
 						response = {
 							id: doc.id,
+							familycode: doc.data().familycode,
 							mobileno: doc.data().mobileno,
 							name: doc.data().name,
 							usertype: doc.data().usertype,
