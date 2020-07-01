@@ -2,17 +2,116 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const express = require('express');
 const cors = require('cors');
+const fileUpload = require("./cloud-function-file-upload");
 const app = express();
 app.use(cors({origin:true}));
+
+fileUpload("/api/picture", app);	
 
 var serviceAccount = require("./performance.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://todo-bca74.firebaseio.com",
+  databaseURL: "https://shreyanagarapp.firebaseio.com",
+  storageBucket: "gs://shreyanagarapp.appspot.com"
 });
 
 const db = admin.firestore();
+
+//Get feed
+app.get('/api/getfeed/:pageNo&:limit', (req, res) => {
+( async() => {
+		try
+		{
+			let query = db.collection('feed');
+			let response = [];
+			let pagedata;
+			let returnvar;
+			await query.get().then( querysnapshot =>{
+				let docs = querysnapshot.docs;
+				let pageNo = req.params.pageNo;
+				let limit = req.params.limit;
+				if(limit > docs.length )
+				{
+					limit = docs.length;
+				}
+				let totalpages = Math.ceil(docs.length/limit);
+				let startIndex = (pageNo-1)*limit;
+				let endIndex = pageNo*limit;
+				if(endIndex > docs.length)
+				{
+					endIndex = docs.length;
+				}
+				for(let index = startIndex; index < endIndex; index++)
+				{
+						let selectedItem = {
+							id					: docs[index].id,
+							name				: docs[index].data().name	,
+							imageURL            : docs[index].data().imageURL,
+							discription         : docs[index].data().discription
+						};
+						response.push(selectedItem);
+				}
+				
+				pagedata = {totalpages:totalpages,
+							currentpage:pageNo};
+	
+									
+				returnvar = {response:response,
+								pagedata:pagedata};
+								
+				return returnvar;
+			})
+			if(returnvar !== null)
+			{
+				return res.status(200).send(returnvar);
+			}
+			else
+			{
+				return res.status(404).send('No Feeds');
+			}
+		}
+		catch(error)
+		{
+			
+		}
+	})();
+});
+
+//upload Feed
+app.post('/api/uploadfeed', (req, res) => {
+	( async() => {
+		try
+		{
+			db.collection('feed').doc()
+			.create({
+							name				: req.body.name			,
+							imageURL            : req.body.imageURL			,
+							discription         : req.body.discription
+			})
+			return res.status(200).send('Feed Added');
+		}
+		catch(error)
+		{
+			console.log(error);
+			return res.status(500).send(error);
+		}
+	})();
+});
+
+//Upload Image
+app.post("/api/picture/", function (req, response, next) {
+    uploadImageToStorage(req.files.file[0])
+    .then(metadata => {
+        response.status(200).json(req.files.file[0].originalname);
+        next();
+    })
+    .catch(error => {
+        console.error(error);
+        response.status(500).json({ error });
+        next();
+    });
+});
 
 //TEST API
 app.get('/hello-world', (req, res) => {
@@ -26,7 +125,7 @@ app.get('/api/read/:id', (req, res) => {
 		{
 			let query = db.collection('entities').doc(req.params.id);
 			let person = await query.get();
-			let response = person.data();
+			let response = person.data();  
 			
 			return res.status(200).send(response);
 		}
@@ -37,6 +136,29 @@ app.get('/api/read/:id', (req, res) => {
 		}
 	})();
 });
+
+const uploadImageToStorage = file => {
+    const storage = admin.storage();
+    return new Promise((resolve, reject) => {
+        const fileUpload = storage.bucket().file(file.originalname);
+        const blobStream = fileUpload.createWriteStream({
+            metadata: {
+                contentType: "image/jpg"
+            }
+        });
+
+        blobStream.on("error", error => reject(error));
+
+        blobStream.on("finish", () => {
+            fileUpload.getMetadata()
+            .then(metadata => resolve(metadata))
+            .catch(error => reject(error));
+        });
+		
+    
+	blobStream.end(file.buffer);
+  });
+}
 
 //for login
 app.get('/api/authphone/:mobileno', (req, res) => {
@@ -138,6 +260,9 @@ app.post('/api/readbyname', (req, res) => {
 	( async() => {
 		try
 		{
+			console.log(req.body.pageNo);
+			console.log(req.body.limit);
+			console.log(req.body.searchtext);
 			let returnvar;
 			let query = db.collection('entities');
 			let pageNo = req.body.pageNo;
