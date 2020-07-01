@@ -73,7 +73,8 @@ app.get('/api/getfeed/:pageNo&:limit', (req, res) => {
 		}
 		catch(error)
 		{
-			
+			console.log(error);
+			return res.status(500).send(error);
 		}
 	})();
 });
@@ -100,18 +101,40 @@ app.post('/api/uploadfeed', (req, res) => {
 });
 
 //Upload Image
-app.post("/api/picture/", function (req, response, next) {
-    uploadImageToStorage(req.files.file[0])
+app.post("/api/picture/", (req, response) => {
+   uploadImageToStorage(req.files.file[0])
     .then(metadata => {
-        response.status(200).json(req.files.file[0].originalname);
-        next();
+        return response.status(200).send(req.files.file[0].originalname);
     })
     .catch(error => {
         console.error(error);
-        response.status(500).json({ error });
-        next();
+        return response.status(500).send({ error });
     });
 });
+
+
+const uploadImageToStorage = file => {
+    const storage = admin.storage();
+    return new Promise((resolve, reject) => {
+        const fileUpload = storage.bucket().file(file.originalname);
+        const blobStream = fileUpload.createWriteStream({
+            metadata: {
+                contentType: "image/jpg"
+            }
+        });
+
+        blobStream.on("error", error => reject(error));
+
+        blobStream.on("finish", () => {
+            fileUpload.getMetadata()
+            .then(metadata => resolve(metadata))
+            .catch(error => reject(error));
+        });
+		
+    
+	blobStream.end(file.buffer);
+  });
+}
 
 //TEST API
 app.get('/hello-world', (req, res) => {
@@ -137,28 +160,7 @@ app.get('/api/read/:id', (req, res) => {
 	})();
 });
 
-const uploadImageToStorage = file => {
-    const storage = admin.storage();
-    return new Promise((resolve, reject) => {
-        const fileUpload = storage.bucket().file(file.originalname);
-        const blobStream = fileUpload.createWriteStream({
-            metadata: {
-                contentType: "image/jpg"
-            }
-        });
 
-        blobStream.on("error", error => reject(error));
-
-        blobStream.on("finish", () => {
-            fileUpload.getMetadata()
-            .then(metadata => resolve(metadata))
-            .catch(error => reject(error));
-        });
-		
-    
-	blobStream.end(file.buffer);
-  });
-}
 
 //for login
 app.get('/api/authphone/:mobileno', (req, res) => {

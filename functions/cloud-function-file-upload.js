@@ -14,13 +14,13 @@ module.exports = (path, app) => {
                 length: req.headers["content-length"],
                 limit: "10mb",
                 encoding: contentType.parse(req).parameters.charset
-            }, function(err, string) {
+            }, (err, string) => {
                 if (err) return next(err)
                 req.rawBody = string;
-                next();
+                return next();
             })
         } else {
-            next();
+            return next();
         }
     })
 
@@ -49,13 +49,13 @@ module.exports = (path, app) => {
                     };
 
                     req.files.file.push(file_object);
-                    next();
+                    return next();
                 });
             });
 
             busboy.end(req.rawBody);
         } else {
-            next();
+            return next();
         }
     })
 }
