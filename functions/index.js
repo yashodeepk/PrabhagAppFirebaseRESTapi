@@ -8,16 +8,82 @@ app.use(cors({origin:true}));
 
 fileUpload("/api/picture", app);	
 
-var serviceAccount = require("./performance.json");
+//var serviceAccount = require("./performance.json"); Shreyanagar Project
+var serviceAccount = require("./performance_old.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://shreyanagarapp.firebaseio.com",
-  storageBucket: "gs://shreyanagarapp.appspot.com"
+  databaseURL: "https://todo-bca74.firebaseio.com",
+  storageBucket: "gs://todo-bca74.appspot.com"
+  //databaseURL: "https://shreyanagarapp.firebaseio.com",
+  //storageBucket: "gs://shreyanagarapp.appspot.com"
 });
 
 const db = admin.firestore();
 
+//Get Birthday and Anniversary 
+app.get('/api/getTodayBirthday/', (req, res) => {
+( async() => {
+		try
+		{
+			let query = db.collection('entities');
+			let bday = [];
+			await query.get().then( querysnapshot =>{
+				var today = new Date();
+				var day = today.getDate();
+				var month = today.getMonth()+1;
+				let docs = querysnapshot.docs;
+				for(let doc of docs)
+				{
+					if(doc.data().dob)
+					{
+						var bDayDate = doc.data().dob.split('/')[0]; 
+						var bDayMonth = doc.data().dob.split('/')[1];
+						if(bDayDate === day && bDayMonth === month)
+						{
+							bday.push(
+								{
+									id: doc.id,
+									name: `Happy Birthday to ${doc.data().name}`,
+								}
+							);
+						}
+					}
+					if(doc.data().dom)
+					{
+						var mDayDate = doc.data().dom.split('/')[0]; 
+						var mDayMonth = doc.data().dom.split('/')[1]; 
+						if(mDayDate === day && mDayMonth === month)
+						{
+							bday.push(
+								{
+									id: doc.id,
+									name: `Happy Marriage Anniversary to ${doc.data().name}`
+								}
+							);
+						}
+					}
+				}
+						 
+		    return bday;
+			})
+			if(bday === null)
+			{
+				return res.status(201).send('No bday or Anniversary today');
+			}
+			else
+			{
+				return res.status(200).send(bday);
+			}
+		}
+		catch(error)
+		{
+			console.log(error);
+			return res.status(500).send(error);
+		}
+	})();
+});
+		
 //Get feed
 app.get('/api/getfeed/:pageNo&:limit', (req, res) => {
 ( async() => {
@@ -42,7 +108,7 @@ app.get('/api/getfeed/:pageNo&:limit', (req, res) => {
 				{
 					endIndex = docs.length;
 				}
-				for(let index = startIndex; index < endIndex; index++)
+				for(let index = endIndex-1; index >= startIndex ; index--)
 				{
 						let selectedItem = {
 							id					: docs[index].id,
@@ -84,7 +150,9 @@ app.post('/api/uploadfeed', (req, res) => {
 	( async() => {
 		try
 		{
-			db.collection('feed').doc()
+			var today = Date.now();
+			console.log(today);
+			db.collection('feed').doc('/' + today + '/')
 			.create({
 							name				: req.body.name			,
 							imageURL            : req.body.imageURL			,
@@ -114,7 +182,7 @@ app.post("/api/picture/", (req, response) => {
 
 
 const uploadImageToStorage = file => {
-    const storage = admin.storage();
+	const storage = admin.storage();
     return new Promise((resolve, reject) => {
         const fileUpload = storage.bucket().file(file.originalname);
         const blobStream = fileUpload.createWriteStream({
